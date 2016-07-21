@@ -6,6 +6,8 @@ import com.seckill.dto.SeckillResult;
 import com.seckill.entity.Seckill;
 import com.seckill.enums.SeckillStatEnum;
 import com.seckill.exception.RepeatKillException;
+import com.seckill.exception.SeckillCloseException;
+import com.seckill.exception.SeckillException;
 import com.seckill.service.ISeckillService;
 import org.omg.CORBA.Request;
 import org.slf4j.Logger;
@@ -85,12 +87,23 @@ public class SeckillController {
         if(userPhone==null||"".equals(userPhone)){
             return new SeckillResult<SeckillExecution>(false,"用户为登录");
         }
-        SeckillExecution seckillExecution=null;
         try{
-             seckillExecution= this.seckillService.execuSeckill(seckillId, userPhone, md5);
+            SeckillExecution seckillExecution= this.seckillService.execuSeckill(seckillId, userPhone, md5);
             return new SeckillResult<SeckillExecution>(true,seckillExecution);
         }catch (RepeatKillException e){
+            //重复秒杀
             logger.error(e.getMessage());
+            SeckillExecution seckillExecution=new SeckillExecution(seckillId,SeckillStatEnum.REPEAT_KILL);
+            return new SeckillResult<SeckillExecution>(true,seckillExecution);
+        }catch (SeckillCloseException e){
+            //秒杀结束
+            logger.error(e.getMessage());
+            SeckillExecution seckillExecution=new SeckillExecution(seckillId,SeckillStatEnum.END);
+            return new SeckillResult<SeckillExecution>(true,seckillExecution);
+        }catch(SeckillException e){
+            //数据被重写
+            logger.error(e.getMessage());
+            SeckillExecution seckillExecution=new SeckillExecution(seckillId,SeckillStatEnum.DATA_REWRITE);
             return new SeckillResult<SeckillExecution>(true,seckillExecution);
         }
     }
